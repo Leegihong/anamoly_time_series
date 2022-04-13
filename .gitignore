@@ -119,3 +119,4 @@ pip-selfcheck.json
 
 # Data 관련
 *.csv
+*.pkl
