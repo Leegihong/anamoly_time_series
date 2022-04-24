@@ -17,12 +17,7 @@ class convautoencoder(nn.Module):
     
     
     def __init__(self, input_size):
-        super(convautoencoder, self).__init__()
-        
-        # self.fc1 = nn.Linear(input_size, 128)
-        # self.fc2 = nn.Linear(128, 64)
-        # self.fc3 = nn.Linear(64, 128)
-        # self.fc4 = nn.Linear(128, input_size)    
+        super(convautoencoder, self).__init__() 
         
         self.fc1 = nn.Conv1d(in_channels= 1, out_channels= 32 ,kernel_size= 7)
         self.fc2 = nn.Conv1d(in_channels= 32, out_channels= 16 ,kernel_size= 7)
