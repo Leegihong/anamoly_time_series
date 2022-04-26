@@ -1,4 +1,5 @@
 import argparse
+from torch.utils.tensorboard import SummaryWriter
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
@@ -10,11 +11,13 @@ import argparse
 
 parser = argparse.ArgumentParser(description= "input parameters")
 
-parser.add_argument("--batch_size", type = int, help= "choose proper batch size for training")
-parser.add_argument("--window_size", required = True, type = int, help= "choose proper sequence size for building model")
-parser.add_argument("--num_epoch", required = True, type = int, help= "choose proper epoch for training")
+parser.add_argument("--batch_size", type = int, default=4,help= "choose proper batch size for training")
+parser.add_argument("--window_size", required = False, type = int, default=288, help= "choose proper sequence size for building model")
+parser.add_argument("--num_epoch", required = False, type = int, default=20, help= "choose proper epoch for training")
 
 args = parser.parse_args()
+
+writer = SummaryWriter()
 
 def main(args):
   dataset = CustomDataset('.\small_noise.csv')
@@ -34,10 +37,13 @@ def main(args):
       cost = F.mse_loss(prediction, y_train)
       cost_list.append(cost.item())
 
-      # cost로 H(x) 계산
+      # gradient를 0으로 초기화 -> 이전에 계산된 gradient값이 남아있어서 그것을 초기화하기 위하여 (pytorch 특징)
       optimizer.zero_grad()
+      # cost function을 미분하여 gradient를 계산
       cost.backward()
+      # layer에 있는 parameters를 업데이트
       optimizer.step()
+    writer.add_scalar('total loss', cost, epoch)
     print('Epoch {:4d}/{} Batch {}/{} Cost: {:.6f}'.format(epoch, nb_epochs, batch_idx+1, len(dataloader), cost.item()))
     
     
@@ -75,6 +81,6 @@ def main(args):
   threshold = np.max(train_mae_loss)
   print("Reconstruction error threshold: ", threshold)
   
-# if __name__ == '__main__':
-#     main(args)
-main(args)
+if __name__ == '__main__':
+  main(args)
+
