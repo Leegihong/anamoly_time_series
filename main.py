@@ -70,7 +70,6 @@ def main(args):
   x_train_pred = model(x_train)
 
   train_mae_loss = np.mean(np.abs(x_train_pred.detach().numpy() - y_train.numpy()), axis=1)
-  print(train_mae_loss)
   plt.hist(train_mae_loss)
   plt.xlim([0,1])
   plt.xlabel("Train MAE loss")

@@ -1,9 +1,13 @@
 import torch
 from model import convautoencoder
-
+import torch.nn.functional as F
+from torch.utils.data import DataLoader
+from dataset import CustomDataset
+import matplotlib.pyplot as plt
+import numpy as np
 
 PATH = './weights/'
-
+threshold = 2.5
 model = convautoencoder(288)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-5) 
 
@@ -15,29 +19,113 @@ checkpoint = torch.load(PATH + 'all.tar')   # dict 불러오기
 model.load_state_dict(checkpoint['model'])
 optimizer.load_state_dict(checkpoint['optimizer'])
 
-model.eval()
 
-def predict(model, dataset,batch_size=1):
-    predictions, losses = [], []
-    criterion = nn.L1Loss(reduction='sum').to(device)
-    dataset_ae = AutoencoderDataset(dataset)
-    dataloader_ae = DataLoader(dataset_ae, 
-                               batch_size=batch_size,
-                               shuffle=False,num_workers=8)
+
+with torch.no_grad():
+    pred = []
+    test_mae_loss = []
+    dataset = CustomDataset('./daily_jumpsup.csv')
+    dataloader = DataLoader(dataset, batch_size = 4, shuffle= False)
+    model.eval()
     with torch.no_grad():
-        model = model.eval()
-        if batch_size == len(dataset) :
-            seq_true  =next(dataloader_ae.__iter__())
-            seq_true = seq_true.to(device)
-            seq_pred = model(seq_true)
-            loss = criterion(seq_pred, seq_true)
-            predictions.append(seq_pred.cpu().numpy().flatten())
-            losses.append(loss.item())
-        else :
-            for idx , seq_true in enumerate(dataloader_ae):
-                seq_true = seq_true.to(device)
-                seq_pred = model(seq_true)
-                loss = criterion(seq_pred, seq_true)
-                predictions.append(seq_pred.cpu().numpy().flatten())
-                losses.append(loss.item())
-    return predictions, losses
+        for batch_idx, samples in enumerate(dataloader):
+            x_test, y_test = samples
+            
+            test_prediction = model(x_test)
+            pred.append(test_prediction.cpu().numpy().flatten())
+
+            loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_test.detach().numpy().flatten()))
+            test_mae_loss.append(loss)
+
+plt.hist(test_mae_loss, bins= 50)
+plt.xlim([0,1])
+plt.xlabel("Train MAE loss")
+plt.ylabel("No of samples")
+plt.show()
+
+anomalies = test_mae_loss > threshold
+print("Number of anomaly samples: ", np.sum(anomalies))
+print("Indices of anomaly samples: ", np.where(anomalies))
+# anomalous_data_indices = []
+# for data_idx in range(TIME_STEPS - 1, len(df_test_value) - TIME_STEPS + 1):
+#     if np.all(anomalies[data_idx - TIME_STEPS + 1 : data_idx]):
+#         anomalous_data_indices.append(data_idx)
+
+            
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def predict(model, dataset,batch_size=4):
+#     predictions, losses = [], []
+#     criterion = F.L1Loss(reduction='sum')
+#     dataset_ae = CustomDataset('./daily_jumpsup.csv')
+#     dataloader_ae = DataLoader(dataset_ae, 
+#                                batch_size=batch_size,
+#                                shuffle=False)
+#     with torch.no_grad():
+#         model = model.eval()
+#         if batch_size == len(dataset) :
+#             seq_true  =next(dataloader_ae.__iter__())
+#             seq_true = seq_true
+#             seq_pred = model(seq_true)
+#             loss = criterion(seq_pred, seq_true)
+#             predictions.append(seq_pred.cpu().numpy().flatten())
+#             losses.append(loss.item())
+#         else :
+#             for idx , seq_true in enumerate(dataloader_ae):
+#                 seq_true = seq_true
+#                 seq_pred = model(seq_true)
+#                 loss = criterion(seq_pred, seq_true)
+#                 predictions.append(seq_pred.cpu().numpy().flatten())
+#                 losses.append(loss.item())
+#     return predictions, losses
