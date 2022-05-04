@@ -67,10 +67,21 @@ def main(args):
   print("End saving the model")
 
   model.eval()
-  x_train_pred = model(x_train)
 
-  train_mae_loss = np.mean(np.abs(x_train_pred.detach().numpy() - y_train.numpy()), axis=1)
-  plt.hist(train_mae_loss)
+  # MAE loss 확인
+  pred = []
+  train_mae_loss = []
+  with torch.no_grad():
+      for batch_idx, samples in enumerate(dataloader):
+          x_train, y_train = samples
+          
+          test_prediction = model(x_train)
+          pred.append(test_prediction.cpu().numpy().flatten())
+
+          loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_train.detach().numpy().flatten()))
+          train_mae_loss.append(loss)
+  
+  plt.hist(train_mae_loss, bins= 50)
   plt.xlim([0,1])
   plt.xlabel("Train MAE loss")
   plt.ylabel("No of samples")

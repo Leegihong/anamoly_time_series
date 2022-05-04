@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 PATH = './weights/'
-threshold = 2.5
+threshold = 0.9
 model = convautoencoder(288)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-5) 
 
@@ -43,13 +43,13 @@ plt.xlabel("Train MAE loss")
 plt.ylabel("No of samples")
 plt.show()
 
-anomalies = test_mae_loss > threshold
-print("Number of anomaly samples: ", np.sum(anomalies))
-print("Indices of anomaly samples: ", np.where(anomalies))
-# anomalous_data_indices = []
-# for data_idx in range(TIME_STEPS - 1, len(df_test_value) - TIME_STEPS + 1):
-#     if np.all(anomalies[data_idx - TIME_STEPS + 1 : data_idx]):
-#         anomalous_data_indices.append(data_idx)
+anomalies = [index for index, ano in enumerate(test_mae_loss) if ano > threshold]
+# print(anomalies)
+print("Number of anomaly samples: ", len(anomalies))
+print("Indices of anomaly samples: ", anomalies)
+print("Values of anomaly :", [test_mae_loss[i] for i in anomalies])
+
+
 
             
 

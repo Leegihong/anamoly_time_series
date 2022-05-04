@@ -3,18 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 class convautoencoder(nn.Module):
-    """
-    in_channels: input의 feature dimension
-    out_channels: 내가 output으로 내고싶은 dimension
-    kernel_size: time step을 얼마만큼 볼 것인가(=frame size = filter size)
-    stride: kernel을 얼마만큼씩 이동하면서 적용할 것인가 (Default: 1) -> 아래 추가 설명
-    dilation: kernel 내부에서 얼마만큼 띄어서 kernel을 적용할 것인가 (Default: 1) -> 아래 추가 설명
-    padding: 한 쪽 방향으로 얼마만큼 padding할 것인가 (그 만큼 양방향으로 적용) (Default: 0)
-    groups: kernel의 height를 조절 (Default: 1) -> 아래 추가 설명
-    bias: bias term을 둘 것인가 안둘 것인가 (Default: True)
-    padding_mode: 'zeros', 'reflect', 'reflect', 'replicate', 'circular' (Default: 'zeros')  
-    """
-    
+       
     
     def __init__(self, input_size):
         super(convautoencoder, self).__init__() 
