@@ -5,11 +5,13 @@ from torch.utils.data import DataLoader
 from dataset import CustomDataset
 import matplotlib.pyplot as plt
 import numpy as np
+from preprocess import TimeseriesPreprocess
+import pickle
 
 PATH = './weights/'
 threshold = 0.9
 model = convautoencoder(288)
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-5) 
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) 
 
 
 model = torch.load(PATH + 'model.pt')  # 전체 모델을 통째로 불러옴, 클래스 선언 필수
@@ -22,32 +24,36 @@ optimizer.load_state_dict(checkpoint['optimizer'])
 
 
 with torch.no_grad():
-    pred = []
+    pred = {}
     test_mae_loss = []
-    dataset = CustomDataset('./daily_jumpsup.csv')
-    dataloader = DataLoader(dataset, batch_size = 4, shuffle= False)
+    preprocess = TimeseriesPreprocess('./voucher.csv')
+    preprocessed_data = preprocess.make_same_length_seq("id", "Item001")
+    dataset = CustomDataset(preprocessed_data)
+    dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
     model.eval()
     with torch.no_grad():
         for batch_idx, samples in enumerate(dataloader):
             x_test, y_test = samples
             
             test_prediction = model(x_test)
-            pred.append(test_prediction.cpu().numpy().flatten())
+            pred[batch_idx] = test_prediction.cpu().numpy().flatten()
 
-            loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_test.detach().numpy().flatten()))
-            test_mae_loss.append(loss)
+            # loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_test.detach().numpy().flatten()))
+            # test_mae_loss.append(loss)
 
-plt.hist(test_mae_loss, bins= 50)
-plt.xlim([0,1])
-plt.xlabel("Train MAE loss")
-plt.ylabel("No of samples")
-plt.show()
+# plt.hist(test_mae_loss, bins= 50)
+# plt.xlim([0,1])
+# plt.xlabel("Train MAE loss")
+# plt.ylabel("No of samples")
+# plt.show()
 
-anomalies = [index for index, ano in enumerate(test_mae_loss) if ano > threshold]
-# print(anomalies)
-print("Number of anomaly samples: ", len(anomalies))
-print("Indices of anomaly samples: ", anomalies)
-print("Values of anomaly :", [test_mae_loss[i] for i in anomalies])
+# anomalies = [index for index, ano in enumerate(test_mae_loss) if ano > threshold]
+# # print(anomalies)
+# print("Number of anomaly samples: ", len(anomalies))
+# print("Indices of anomaly samples: ", anomalies)
+# print("Values of anomaly :", [test_mae_loss[i] for i in anomalies])
+with open('result_dict.pkl','wb') as f:
+    pickle.dump(pred,f)
 
 
 

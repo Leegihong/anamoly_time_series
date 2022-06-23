@@ -7,19 +7,28 @@ class convautoencoder(nn.Module):
     
     def __init__(self, input_size):
         super(convautoencoder, self).__init__() 
-        
-        self.fc1 = nn.Conv1d(in_channels= 1, out_channels= 32 ,kernel_size= 7)
-        self.fc2 = nn.Conv1d(in_channels= 32, out_channels= 16 ,kernel_size= 7)
-        self.fc3 = nn.ConvTranspose1d(in_channels= 16, out_channels= 32 ,kernel_size= 7)
-        self.fc4 = nn.ConvTranspose1d(in_channels= 32, out_channels= 1 ,kernel_size= 7)  
-        
+                
+        self.encoder = nn.Sequential(
+            nn.Conv1d(in_channels= 1, out_channels= 1 ,kernel_size= 8, stride=2),
+            nn.ReLU(),
+            nn.Conv1d(in_channels= 1, out_channels= 1 ,kernel_size= 8, stride=2),
+            nn.ReLU()
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose1d(in_channels= 1, out_channels= 1, kernel_size= 8, stride=2),
+            nn.ReLU(),
+            nn.ConvTranspose1d(in_channels= 1, out_channels= 1 ,kernel_size=8, stride=2),
+            nn.ReLU()
+           
+        )
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
-
-        return x
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return decoded
+    
+    def get_latent(self, x):
+        self.encoder(x).size()
+        return self.encoder(x)
     
     
     

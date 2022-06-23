@@ -1,31 +1,96 @@
 import argparse
+from ctypes import util
 from torch.utils.tensorboard import SummaryWriter
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from dataset import CustomDataset
+from preprocess import TimeseriesPreprocess
 from model import convautoencoder
 import matplotlib.pyplot as plt
 import argparse
+import pickle
+import random
+
+random_seed = 42
+random.seed(random_seed)
+torch.manual_seed(random_seed)
+np.random.seed(random_seed)
+
+def model_save(model, optimizer, PATH):
+    # Model 저장
+    print("Start saving the model")
+
+    PATH = './weights/'
+
+    torch.save(model, PATH + 'model.pt')  # 전체 모델 저장
+    torch.save(model.state_dict(), PATH + 'model_state_dict.pt')  # 모델 객체의 state_dict 저장
+    torch.save({
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }, PATH + 'all.tar')
+
+    print("End saving the model")
+    
+def model_eval(model, dataloader):
+    model.eval()
+    pred = []
+    train_mae_loss = []
+    with torch.no_grad():
+        for batch_idx, samples in enumerate(dataloader):
+            x_train, y_train = samples
+            
+            test_prediction = model(x_train)
+            pred.append(test_prediction.cpu().numpy().flatten())
+
+            loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_train.detach().numpy().flatten()))
+            train_mae_loss.append(loss)
+    
+    plt.hist(train_mae_loss, bins= 50)
+    plt.xlim([0,1])
+    plt.xlabel("Train MAE loss")
+    plt.ylabel("No of samples")
+    plt.show()
+
+    # Get reconstruction loss threshold.
+    threshold = np.max(train_mae_loss)
+    print("Reconstruction error threshold: ", threshold)
+    
+
 
 parser = argparse.ArgumentParser(description= "input parameters")
 
-parser.add_argument("--batch_size", type = int, default=4,help= "choose proper batch size for training")
-parser.add_argument("--window_size", required = False, type = int, default=288, help= "choose proper sequence size for building model")
-parser.add_argument("--num_epoch", required = False, type = int, default=20, help= "choose proper epoch for training")
+parser.add_argument("--batch_size", 
+                    type = int, 
+                    default=32,
+                    help= "choose proper batch size for training")
+parser.add_argument("--window_size", 
+                    required = False, 
+                    type = int, 
+                    default=288, 
+                    help= "choose proper sequence size for building model")
+parser.add_argument("--num_epoch", 
+                    required = False, 
+                    type = int, 
+                    default=20, 
+                    help= "choose proper epoch for training")
 
 args = parser.parse_args()
-
 writer = SummaryWriter()
 
+
 def main(args):
-  dataset = CustomDataset('.\small_noise.csv')
+  preprocess = TimeseriesPreprocess('./voucher.csv')
+  preprocessed_data = preprocess.make_same_length_seq("id", "Item001")
+  dataset = CustomDataset(preprocessed_data)
   dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
   model = convautoencoder(input_size= args.window_size)
-  optimizer = torch.optim.Adam(model.parameters(), lr=1e-5) 
+  optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) 
   nb_epochs = args.num_epoch
   cost_list = []
+  
+  
   # 학습 시작
   for epoch in range(nb_epochs + 1):
     for batch_idx, samples in enumerate(dataloader):
@@ -52,44 +117,27 @@ def main(args):
   last_cost = cost_list[-1]
   print(f"Last of cost = {last_cost}")
 
-  # Model 저장
-  print("Start saving the model")
+  # # Model 저장
 
   PATH = './weights/'
-
-  torch.save(model, PATH + 'model.pt')  # 전체 모델 저장
-  torch.save(model.state_dict(), PATH + 'model_state_dict.pt')  # 모델 객체의 state_dict 저장
-  torch.save({
-      'model': model.state_dict(),
-      'optimizer': optimizer.state_dict()
-  }, PATH + 'all.tar')
-
-  print("End saving the model")
-
-  model.eval()
-
-  # MAE loss 확인
-  pred = []
-  train_mae_loss = []
+  model_save(model = model, optimizer = optimizer, PATH= PATH)
+  model_eval(model = model, dataloader = dataloader)
+  
+  
+  # latent 추출
+  dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
+  lat = {}
   with torch.no_grad():
       for batch_idx, samples in enumerate(dataloader):
           x_train, y_train = samples
           
-          test_prediction = model(x_train)
-          pred.append(test_prediction.cpu().numpy().flatten())
+          latent = model.get_latent(x_train)
+          # lat.append(test_prediction.cpu().numpy().flatten())
+          lat[batch_idx] = latent.cpu().numpy().flatten()
+          
+  with open('data_dict.pkl','wb') as f:
+    pickle.dump(lat,f)
 
-          loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_train.detach().numpy().flatten()))
-          train_mae_loss.append(loss)
-  
-  plt.hist(train_mae_loss, bins= 50)
-  plt.xlim([0,1])
-  plt.xlabel("Train MAE loss")
-  plt.ylabel("No of samples")
-  plt.show()
-
-  # Get reconstruction loss threshold.
-  threshold = np.max(train_mae_loss)
-  print("Reconstruction error threshold: ", threshold)
   
 if __name__ == '__main__':
   main(args)
