@@ -23,15 +23,21 @@ class TimeseriesPreprocess:
         for i, sequence in enumerate(seq):
             mask = True
             while mask:
-                if len(sequence) < length:
+                if len(sequence)< 51:
+                    print(f"{i}th sequnce Length Over")
+                    mask = False
+                elif len(sequence) < length:
                     sequence.append(0)
                 elif len(sequence) == length:
                     # print(f"{i} sequence over")
                     sequences.append(sequence)
                     mask = False
                 else:
-                    print("Length Over")
-                    maks = False  
+                    print(f"{i}th sequnce Length Over")
+                    mask = False
         print("ALL SEQUNCE MAKING OVER")
         print(np.shape(seq))
         return sequences
+    
+    
+    

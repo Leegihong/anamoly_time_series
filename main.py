@@ -33,29 +33,7 @@ def model_save(model, optimizer, PATH):
 
     print("End saving the model")
     
-def model_eval(model, dataloader):
-    model.eval()
-    pred = []
-    train_mae_loss = []
-    with torch.no_grad():
-        for batch_idx, samples in enumerate(dataloader):
-            x_train, y_train = samples
-            
-            test_prediction = model(x_train)
-            pred.append(test_prediction.cpu().numpy().flatten())
 
-            loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_train.detach().numpy().flatten()))
-            train_mae_loss.append(loss)
-    
-    plt.hist(train_mae_loss, bins= 50)
-    plt.xlim([0,1])
-    plt.xlabel("Train MAE loss")
-    plt.ylabel("No of samples")
-    plt.show()
-
-    # Get reconstruction loss threshold.
-    threshold = np.max(train_mae_loss)
-    print("Reconstruction error threshold: ", threshold)
     
 
 
@@ -63,7 +41,7 @@ parser = argparse.ArgumentParser(description= "input parameters")
 
 parser.add_argument("--batch_size", 
                     type = int, 
-                    default=32,
+                    default=16,
                     help= "choose proper batch size for training")
 parser.add_argument("--window_size", 
                     required = False, 
@@ -73,7 +51,7 @@ parser.add_argument("--window_size",
 parser.add_argument("--num_epoch", 
                     required = False, 
                     type = int, 
-                    default=20, 
+                    default=40, 
                     help= "choose proper epoch for training")
 
 args = parser.parse_args()
@@ -118,25 +96,26 @@ def main(args):
   print(f"Last of cost = {last_cost}")
 
   # # Model 저장
-
+  dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
   PATH = './weights/'
   model_save(model = model, optimizer = optimizer, PATH= PATH)
-  model_eval(model = model, dataloader = dataloader)
-  
-  
-  # latent 추출
-  dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
-  lat = {}
+
+  model.eval()
+  train_mae_loss = []
   with torch.no_grad():
       for batch_idx, samples in enumerate(dataloader):
           x_train, y_train = samples
           
-          latent = model.get_latent(x_train)
-          # lat.append(test_prediction.cpu().numpy().flatten())
-          lat[batch_idx] = latent.cpu().numpy().flatten()
+          test_prediction = model(x_train)
+
+          loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_train.detach().numpy().flatten()))
+          train_mae_loss.append(loss)
+  
+  # Get reconstruction loss threshold.
+  threshold = np.max(train_mae_loss)
+  print("Reconstruction error threshold: ", threshold)
           
-  with open('data_dict.pkl','wb') as f:
-    pickle.dump(lat,f)
+  
 
   
 if __name__ == '__main__':

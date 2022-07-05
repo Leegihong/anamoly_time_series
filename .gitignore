@@ -130,4 +130,5 @@ __pycache__/
 runs/
 
 *.ipynb
+fig/
 

@@ -1,3 +1,4 @@
+from cgi import test
 import torch
 from model import convautoencoder
 import torch.nn.functional as F
@@ -9,7 +10,7 @@ from preprocess import TimeseriesPreprocess
 import pickle
 
 PATH = './weights/'
-threshold = 0.9
+threshold = 0.1701
 model = convautoencoder(288)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) 
 
@@ -25,9 +26,11 @@ optimizer.load_state_dict(checkpoint['optimizer'])
 
 with torch.no_grad():
     pred = {}
+    lat = {}
+    origin = {}
     test_mae_loss = []
-    preprocess = TimeseriesPreprocess('./voucher.csv')
-    preprocessed_data = preprocess.make_same_length_seq("id", "Item001")
+    preprocess = TimeseriesPreprocess('./data_wave.csv')
+    preprocessed_data = preprocess.make_same_length_seq("WaveId", "Item001")
     dataset = CustomDataset(preprocessed_data)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
     model.eval()
@@ -36,24 +39,38 @@ with torch.no_grad():
             x_test, y_test = samples
             
             test_prediction = model(x_test)
-            pred[batch_idx] = test_prediction.cpu().numpy().flatten()
+            latent = model.get_latent(x_test)
+            
+            pred[batch_idx+1] = test_prediction.cpu().numpy().flatten()
+            lat[batch_idx+1] = latent.cpu().numpy().flatten()
+            origin[batch_idx+1] = y_test.cpu().numpy().flatten()
+            
+            loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_test.detach().numpy().flatten()))
+            test_mae_loss.append(loss)
 
-            # loss = np.mean(np.abs(test_prediction.detach().numpy().flatten() - y_test.detach().numpy().flatten()))
-            # test_mae_loss.append(loss)
 
-# plt.hist(test_mae_loss, bins= 50)
-# plt.xlim([0,1])
-# plt.xlabel("Train MAE loss")
-# plt.ylabel("No of samples")
-# plt.show()
+plt.hist(test_mae_loss)
+plt.show()
 
-# anomalies = [index for index, ano in enumerate(test_mae_loss) if ano > threshold]
-# # print(anomalies)
-# print("Number of anomaly samples: ", len(anomalies))
-# print("Indices of anomaly samples: ", anomalies)
-# print("Values of anomaly :", [test_mae_loss[i] for i in anomalies])
+anomalies = [index for index, ano in enumerate(test_mae_loss) if ano > threshold]
+anomal = {}
+for index, ano in enumerate(test_mae_loss):
+    if ano > threshold:
+        anomal[index+1] = ano
+
+# print(anomalies)
+print("Number of anomaly samples: ", len(anomalies))
+print("Indices of anomaly samples: ", anomalies)
+print("Values of anomaly :", [test_mae_loss[i] for i in anomalies])
+
 with open('result_dict.pkl','wb') as f:
     pickle.dump(pred,f)
+with open('origin_dict.pkl','wb') as f:
+    pickle.dump(origin,f)
+with open('data_dict.pkl','wb') as f:
+    pickle.dump(lat,f)
+with open('anomaliy_dict.pkl','wb') as f:
+    pickle.dump(anomal,f)
 
 
 
