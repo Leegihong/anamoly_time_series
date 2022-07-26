@@ -10,7 +10,7 @@ from preprocess import TimeseriesPreprocess
 import pickle
 
 PATH = './weights/'
-threshold = 0.1701
+threshold = 0.02695318
 model = convautoencoder(288)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3) 
 
@@ -30,7 +30,7 @@ with torch.no_grad():
     origin = {}
     test_mae_loss = []
     preprocess = TimeseriesPreprocess('./data_wave.csv')
-    preprocessed_data = preprocess.make_same_length_seq("WaveId", "Item001")
+    preprocessed_data = preprocess.make_same_length_seq("WaveId", "Item001", length= 320)
     dataset = CustomDataset(preprocessed_data)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=False)
     model.eval()
